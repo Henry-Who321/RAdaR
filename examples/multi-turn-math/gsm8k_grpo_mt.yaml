@@ -39,7 +39,7 @@ gconfig:
 actor:
   experiment_name: ${experiment_name}
   trial_name: ${trial_name}
-  path: Qwen/Qwen2.5-1.5B-Instruct
+  path: /vlm/pretrain_models/Qwen/Qwen3-0.6B
   init_from_scratch: false
   disable_dropout: true
   gradient_checkpointing: true
@@ -107,18 +107,20 @@ vllm:
 
 # datasets
 train_dataset:
-  batch_size: 256
+  # batch_size: 256
+  batch_size: 4
   pin_memory: true
   num_workers: 4
-  path: openai/gsm8k
+  path: /vlm/hhr/data/gsm8k
   type: rl
   max_length: 1024
 
 valid_dataset:
-  batch_size: 256
+  # batch_size: 256
+  batch_size: 4
   pin_memory: true
   num_workers: 4
-  path: openai/gsm8k
+  path: /vlm/hhr/data/gsm8k
   type: rl
 
 # Utilities

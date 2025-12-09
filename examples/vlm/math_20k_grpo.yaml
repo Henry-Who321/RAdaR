@@ -1,72 +1,75 @@
-experiment_name: camel-gsm8k-grpo
-trial_name: trial0
-
+experiment_name: our_math_reinforce_baseline
+trial_name: trial_3
 seed: 1
 enable_offload: false
-total_train_epochs: 10
+total_train_epochs: 5
 tokenizer_path: ${actor.path}
-
-n_trajs: 2
-max_tokens_per_trajectory: 8192
 
 cluster:
   n_nodes: 1
-  n_gpus_per_node: 2
-  fileroot: /tmp/areal/experiments
+  n_gpus_per_node: 8
+  fileroot: /vlm/hhr/AReaL/tmp/experiments
   name_resolve:
     type: nfs
-    nfs_record_root: /tmp/areal/name_resolve
+    nfs_record_root: /vlm/hhr/AReaL/tmp/name_resolve
 
 allocation_mode: sglang:d4p1t1+d4p1t1
 
 rollout:
   experiment_name: ${experiment_name}
   trial_name: ${trial_name}
-  max_concurrent_rollouts: 256
+  max_concurrent_rollouts: 4
   queue_size: null
   consumer_batch_size: ${train_dataset.batch_size}
-  max_head_offpolicyness: 2
+  max_head_offpolicyness: 4
   enable_rollout_tracing: false
 
 gconfig:
-  n_samples: 1
+  n_samples: 4
   min_new_tokens: 0
-  max_new_tokens: 1024
+  max_new_tokens: 32
   greedy: false
   temperature: 1.0
 
 actor:
   experiment_name: ${experiment_name}
   trial_name: ${trial_name}
-  # path: Qwen/Qwen2-1.5B-Instruct
-  path: /vlm/pretrain_models/Qwen/Qwen2.5-3B
+  # path: /vlm/pretrain_models/Qwen2.5-VL-3B-Instruct
+  path: /mnt/publicdataset/Qwen/Qwen3-VL-4B-Instruct
   init_from_scratch: false
   disable_dropout: true
   gradient_checkpointing: true
   dtype: bfloat16
   mb_spec:
-    max_tokens_per_mb: 16384
+      # max_tokens_per_mb: 10240  # 模型支持的最大序列长度
+    max_tokens_per_mb: 8192  # 模型支持的最大序列长度
+    # max_tokens_per_mb: 16384  # 模型支持的最大序列长度
+    # [完整的输入序列] = [prompt] + [模型生成的 response]
   optimizer:
     type: adam
-    lr: 1.70e-5
-    weight_decay: 0.017
+    lr: 2e-6
+    weight_decay: 0.01
     beta1: 0.9
     beta2: 0.999
     eps: 1e-8
     lr_scheduler_type: constant
     gradient_clipping: 1.0
     warmup_steps_proportion: 0.001
-  group_size: 1
+  group_size: ${gconfig.n_samples}
   eps_clip: 0.4
   temperature: ${gconfig.temperature}
   reward_scaling: 10.0
   reward_bias: -0.5
   kl_ctl: 0.0
-  ppo_n_minibatches: 1
+  ppo_n_minibatches: 2
   recompute_logprob: true
   use_decoupled_loss: true
   behav_imp_weight_cap: 5.0
   dynamic_sampling: false
+  reward_norm:
+    mean_level: group
+    std_level: group
+    group_size: ${gconfig.n_samples}
   adv_norm:
     mean_level: batch
     std_level: batch
@@ -80,7 +83,9 @@ ref:
   disable_dropout: true
   dtype: ${actor.dtype}
   mb_spec:
-    max_tokens_per_mb: 10240
+    # max_tokens_per_mb: 10240  # 模型支持的最大序列长度
+    max_tokens_per_mb: 8192  # 模型支持的最大序列长度
+    # max_tokens_per_mb: 16384  # 模型支持的最大序列长度 oom
   optimizer: null
 
 # SGLang
@@ -89,33 +94,24 @@ sglang:
   random_seed: ${seed}
   skip_tokenizer_init: true
   dtype: ${actor.dtype}
-  max_running_requests: null
+  max_running_requests: 64
   context_length: 32768
-  mem_fraction_static: 0.8
-  disable_radix_cache: true
-
-vllm:
-  model: ${actor.path}
-  seed: ${seed}
-  skip_tokenizer_init: false
-  dtype: ${actor.dtype}
-  max_model_len: 32768
-  gpu_memory_utilization: 0.9
+  mem_fraction_static: 0.4
+  enable_multimodal: true
 
 # datasets
 train_dataset:
-  batch_size: 256
+  batch_size: 8
   pin_memory: true
   num_workers: 4
-  path: openai/gsm8k
+  path: /rice_vl/gar/math/math_filtered_classified_6_stage1_with_idx_cleaned.jsonl
   type: rl
-  max_length: 1024
 
 valid_dataset:
-  batch_size: 256
+  batch_size: 8
   pin_memory: true
   num_workers: 4
-  path: openai/gsm8k
+  path: /rice_vl/gar/math/math_filtered_classified_6_stage1_with_idx_cleaned.jsonl
   type: rl
 
 # Utilities
