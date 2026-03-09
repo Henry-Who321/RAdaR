@@ -121,7 +121,6 @@ class VisionRLVRWorkflow(RLVRWorkflow):
         input_ids: list[int] = processed_input["input_ids"].tolist()[0]
 
         n_samples = self.gconfig.n_samples
-
         byte_images = image2base64(data["images"])
         req = ModelRequest(
             rid=uuid.uuid4().hex,
@@ -192,6 +191,10 @@ class VisionRLVRWorkflow(RLVRWorkflow):
 
             # Dump rollout to file
             file_path = os.path.join(dump_path, f"{qid}.txt")
+            # Fix: Get the parent directory of the file and ensure it exists
+            # Because qid might contain "folder/subfolder/image.png", resulting in a very deep path.
+            parent_dir = os.path.dirname(file_path)
+            await aiofiles.os.makedirs(parent_dir, exist_ok=True)
             seqlens = [
                 len(resp.input_tokens) + len(resp.output_tokens) for resp in resps
             ]

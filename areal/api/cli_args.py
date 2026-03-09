@@ -4,7 +4,7 @@ import os
 from dataclasses import MISSING as dataclass_missing
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
 import uvloop
 import yaml
@@ -168,6 +168,11 @@ class GenerationHyperparameters:
     lora_name: str = field(
         default="",
         metadata={"help": "Lora name to be used for this generation."},
+    )
+
+    regex: str | None = field(
+        default=None,
+        metadata={"help": "Regex to be used for this generation."},
     )
 
     def new(self, **kwargs):
@@ -789,7 +794,7 @@ class vLLMConfig:
     block_size: int = 16
     swap_space: int = 4
     cpu_offload_gb: float = 0
-    disable_sliding_window: bool = True
+    disable_sliding_window: bool = False
     # NOTE: Defaults max_model_len to 32k because a larger value
     # will enable chunked prefill in vLLM, which will cause
     # evalution performance degeneration.
@@ -889,6 +894,9 @@ class SGLangConfig:
     enable_mixed_chunk: bool = False
     enable_dp_attention: bool = False
     enable_ep_moe: bool = False
+    enable_custom_logit_processor: bool = False
+    grammar_backend: str | None = None
+    stop: str | None = None
     enable_torch_compile: bool = False
     torch_compile_max_bs: int = 32
     cuda_graph_max_bs: int | None = None
@@ -969,6 +977,8 @@ class SGLangConfig:
 
     @staticmethod
     def build_cmd_from_args(args: dict[str, Any]):
+        args["grammar_backend"] = "xgrammar"
+
         return get_py_cmd("sglang.launch_server", args)
 
     @staticmethod
@@ -984,6 +994,8 @@ class SGLangConfig:
     ):
         # Map "all-linear" to "all"
         args: dict = conf_as_dict(sglang_config)
+        args["grammar_backend"] = "xgrammar"
+
         if sglang_config.enable_multithread_load or sglang_config.enable_fast_load:
             if not pkg_version.is_version_equal("sglang", "0.5.2"):
                 raise RuntimeError(

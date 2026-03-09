@@ -38,7 +38,7 @@ class SGLangBackend:
         gconfig = req.gconfig
         stop_token_ids = gconfig.stop_token_ids
         stop = gconfig.stop
-
+        regex = gconfig.regex
         sample_params = {
             "top_p": gconfig.top_p,
             "top_k": gconfig.top_k,
@@ -47,12 +47,16 @@ class SGLangBackend:
             "stop_token_ids": stop_token_ids,
             "frequency_penalty": gconfig.frequency_penalty,
         }
+        
+        if regex is not None:
+            sample_params["regex"] = regex
+
         if stop:
             sample_params["stop"] = stop
 
         payload = {
             "input_ids": req.input_ids.copy(),
-            "image_data": req.image_data,  # ImageObject or str
+            "image_data": req.image_data,
             "sampling_params": sample_params,
             "return_logprob": True,
             "stream": False,
@@ -195,6 +199,7 @@ class SGLangBackend:
 
     def launch_server(self, server_args: dict[str, Any]) -> subprocess.Popen:
         """Launch SGLang server subprocess."""
+        server_args["grammar_backend"] = "xgrammar"
         cmd = SGLangConfig.build_cmd_from_args(server_args)
 
         _env = os.environ.copy()
