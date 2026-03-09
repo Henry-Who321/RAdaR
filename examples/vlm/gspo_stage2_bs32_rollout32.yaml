@@ -1,0 +1,166 @@
+experiment_name: gspo_stage2_bs32_rollout32
+trial_name: trial_0
+seed: 34
+enable_offload: false
+total_train_epochs: 100
+tokenizer_path: ${actor.path}
+
+cluster:
+  n_nodes: 1
+  n_gpus_per_node: 8
+  fileroot:  AReaL/tmp/experiments
+  name_resolve:
+    type: nfs
+    nfs_record_root: AReaL/tmp/name_resolve
+
+allocation_mode: sglang:d6p1t1+d2p1t1
+
+rollout:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  max_concurrent_rollouts: 64
+  queue_size: null
+  consumer_batch_size: ${train_dataset.batch_size}
+  max_head_offpolicyness: 8
+  enable_rollout_tracing: false
+
+gconfig:
+  n_samples: 32
+  min_new_tokens: 0
+  max_new_tokens: 4096
+  greedy: false
+  temperature: 1.3
+  regex: "(on|off)>.*"
+
+actor:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  path: AReaL/tmp/checkpoint/stage1.2_saved_ckpt_4b/epoch0epochstep269globalstep269
+  init_from_scratch: false
+  disable_dropout: true
+  gradient_checkpointing: true
+  dtype: bfloat16
+  mb_spec:
+    max_tokens_per_mb: 10240  
+    # Maximum sequence length supported by the model
+    # [Complete input sequence] = [prompt] + [model-generated response]
+  optimizer:
+    type: adam
+    lr: 1e-6
+    weight_decay: 0.01
+    beta1: 0.9
+    beta2: 0.999
+    eps: 1e-8
+    lr_scheduler_type: cosine # cosine, constant
+    gradient_clipping: 1.0
+    warmup_steps_proportion: 0.001
+  group_size: ${gconfig.n_samples}
+  eps_clip: 0.20
+  eps_clip_higher: 0.22
+  temperature: ${gconfig.temperature}
+  reward_scaling: 10.0
+  reward_bias: -0.5
+  kl_ctl: 0.0
+  ppo_n_minibatches: 8
+  recompute_logprob: true
+  use_decoupled_loss: true
+  behav_imp_weight_cap: 5.0
+  dynamic_sampling: false
+  reward_norm:
+    mean_level: group
+    std_level: group
+    group_size: ${gconfig.n_samples}
+  adv_norm:
+    mean_level: batch
+    std_level: batch
+  max_new_tokens: ${gconfig.max_new_tokens}
+  importance_sampling_level: sequence # GSPO
+
+ref:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  path: ${actor.path}
+  init_from_scratch: false
+  disable_dropout: true
+  dtype: ${actor.dtype}
+  mb_spec:
+    max_tokens_per_mb: 10240
+    # Maximum sequence length supported by the model
+    # [Complete input sequence] = [prompt] + [model-generated response]
+  optimizer: null
+
+# SGLang
+sglang:
+  model_path: ${actor.path}
+  random_seed: ${seed}
+  skip_tokenizer_init: false
+  dtype: ${actor.dtype}
+  max_running_requests: 32
+  context_length: 40960
+  mem_fraction_static: 0.65
+  enable_multimodal: true
+  grammar_backend: xgrammar
+
+vllm:
+  model: ${actor.path}
+  seed: ${seed}
+  skip_tokenizer_init: false
+  dtype: ${actor.dtype}
+  max_model_len: 32768
+  gpu_memory_utilization: 0.6
+
+# datasets
+train_dataset:
+  batch_size: 32
+  pin_memory: true
+  num_workers: 4
+  path: AReaL/tmp/dataset/stage2_train_data_14k.jsonl
+  type: rl
+
+valid_dataset:
+  batch_size: 24
+  pin_memory: true
+  num_workers: 4
+  path: AReaL/tmp/dataset/stage2_val_data_200.jsonl
+  type: rl
+
+# Utilities
+saver:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: null
+  freq_steps: 10
+  freq_secs: null
+
+recover:
+  mode: disabled
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: 1
+  freq_steps: null
+  freq_secs: 3600
+
+evaluator:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: null
+  freq_steps: 10
+  freq_secs: null
+
+stats_logger:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  wandb:
+    mode: online
+  swanlab:
+    mode: disabled
+
+launcher:
+  inference_server_cpus_per_gpu: 4
+  inference_server_mem_per_gpu: 32768
+  trainer_cpus_per_gpu: 4
+  trainer_mem_per_gpu: 32768
