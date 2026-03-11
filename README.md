@@ -62,19 +62,3 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python3 -m areal.launcher.local examples/vl
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python3 -m areal.launcher.local examples/vlm/radar_stage2_train.py --config examples/vlm/radar_gspo_stage2_bs32_rollout32.yaml
 ```
-
-## 📖 Resources
-
-- [Installation](https://inclusionai.github.io/AReaL/tutorial/installation.html)
-- [Quickstart](https://inclusionai.github.io/AReaL/tutorial/quickstart.html)
-- [CLI Configurations](https://inclusionai.github.io/AReaL/cli_reference.html)
-- [Asynchronous RL Explained](https://inclusionai.github.io/AReaL/algorithms/async.html)
-- [Fine-Tuning Large MoE](https://inclusionai.github.io/AReaL/tutorial/megatron.html)
-- [Agentic RL](https://inclusionai.github.io/AReaL/tutorial/agentic_rl.html)
-- [Debugging Best Practices](https://inclusionai.github.io/AReaL/best_practices/debugging.html)
-- [Handling OOM Issues](https://inclusionai.github.io/AReaL/best_practices/handling_oom.html)
-
-## 📄 Citation
-
-```bibtex
-```
