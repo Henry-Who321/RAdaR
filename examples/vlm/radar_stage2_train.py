@@ -46,10 +46,10 @@ def main(args):
 
     config, _ = load_expr_config(args, GRPOConfig)
 
-    # dist.init_process_group("gloo")
-    dist.init_process_group("nccl")
-    # Create a group for stats all-reduce.
-    group = dist.new_group()
+    if dist.is_initialized():
+         pass
+    else:
+        dist.init_process_group("nccl")
 
     rank = int(os.getenv("RANK", "0"))
 
@@ -228,12 +228,7 @@ def main(args):
                         print(f"Error Message: {e}")
                         if 'query_id' in batch:
                             print(f"Suspect IDs in this batch: {batch['query_id']}")
-                        elif 'id' in batch:
-                            print(f"Suspect IDs in this batch: {batch['id']}")
-                        else:
-                            print("Batch keys available:", batch.keys())
-                        print("="*50 + "\n")
-                    pass
+                    raise e # 打印完后继续抛出异常，中断程序
                 log_gpu_stats("recompute logp")
 
         if ref is not None:

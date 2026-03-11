@@ -90,6 +90,7 @@ from areal.utils.ulysses import (
 
 is_qwen3vl = True
 
+
 class FSDPEngine(TrainEngine):
     def __init__(self, config: TrainEngineConfig):
         self.config = config
@@ -1282,10 +1283,15 @@ class FSDPEngine(TrainEngine):
                     video_grid_thw = torch.cat(video_grid_thw_list)
 
             if is_qwen3vl == True:
-                if 'position_ids' in input_ and input_['position_ids'] is not None:
-                    input_['position_ids'] = input_['position_ids'].to(torch.int64)
-                if 'attention_mask' in input_ and input_['attention_mask'] is not None:
-                    input_['attention_mask'] = input_['attention_mask'].to(torch.int64)
+                if "position_ids" in input_ and input_["position_ids"] is not None:
+                    input_["position_ids"] = input_["position_ids"].to(torch.int64)
+                if "attention_mask" in input_ and input_["attention_mask"] is not None:
+                    input_["attention_mask"] = input_["attention_mask"].to(torch.int64)
+                # input_ids must be int64 for get_rope_index: it creates position_ids
+                # with dtype=input_ids.dtype, but torch.arange() produces int64 llm_positions,
+                # causing dtype mismatch on assignment if input_ids is int32.
+                input_ids = input_ids.to(torch.int64)
+                attn_mask = attn_mask.to(torch.int64)
 
             position_ids, _ = self.model.model.get_rope_index(
                 input_ids, image_grid_thw, video_grid_thw, attn_mask
