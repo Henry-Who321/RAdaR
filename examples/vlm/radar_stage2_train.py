@@ -228,7 +228,8 @@ def main(args):
                         print(f"Error Message: {e}")
                         if 'query_id' in batch:
                             print(f"Suspect IDs in this batch: {batch['query_id']}")
-                    raise e # 打印完后继续抛出异常，中断程序
+                    pass
+                    # raise e
                 log_gpu_stats("recompute logp")
 
         if ref is not None:
