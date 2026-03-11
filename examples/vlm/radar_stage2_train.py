@@ -32,13 +32,13 @@ from areal.workflow.vision_rlvr import VisionRLVRWorkflow
 
 from examples.vlm.dataset import LazyVLMJsonlDataset
 from examples.vlm.reward_fn import RAdar_stage2_reward_fn
-# custom_image_dir = os.environ.get("VLM_IMAGE_DIR", "/PATH/TO/YOUR/IMAGES")
-custom_image_dir = os.environ.get("VLM_IMAGE_DIR", "/rice_vl/instruct/images")
+
+custom_image_dir = os.environ.get("VLM_IMAGE_DIR", "/PATH/TO/YOUR/IMAGES")
 # The base directory where your images are stored.
 # Please update this path or set the VLM_IMAGE_DIR environment variable.
 
 # ==========================================
-# 4. Main Function
+# Main Function
 # ==========================================
 def main(args):
     os.environ["SGLANG_VLM_CACHE_SIZE_MB"] = "20480" 

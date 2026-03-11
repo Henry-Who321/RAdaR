@@ -7,15 +7,16 @@ from .utils import (
     calculate_length_penalty,
     stage2_process_completions_for_reward,
     stage1_2_process_completions_for_reward,
+    stage1_1_process_completions_for_reward
 )
 
 def RAdar_stage1_2_reward_fn(prompt, completions, answer, **kwargs):
     """
-    Reward function for Radar Stage 1.5/2 training (prompt-based mode detection).
+    Reward function for Radar Stage 1.2 training (prompt-based mode detection).
     
     Ported from radar_stage1_2_train.py's step2_format_and_accuracy_reward_fn.
     """
-    mode, _, completion_text = stage1_2_process_completions_for_reward(completions, prompt)
+    mode, _, completions_text = stage1_2_process_completions_for_reward(completions, prompt)
 
     # --- Constants & Configuration ---
     R_THINK_TAG = 0.2            # Reward for correct thinking tag pairs
@@ -31,7 +32,7 @@ def RAdar_stage1_2_reward_fn(prompt, completions, answer, **kwargs):
 
     target_think_tag = "think_on" if mode == "should_reasoning" else "think_off"
     think_pattern = rf'<{target_think_tag}>(.*?)</{target_think_tag}>'
-    think_match = re.search(think_pattern, completion_text, re.DOTALL | re.IGNORECASE)
+    think_match = re.search(think_pattern, completions_text, re.DOTALL | re.IGNORECASE)
 
     if think_match:
         # Matched correct thinking tags
@@ -54,21 +55,21 @@ def RAdar_stage1_2_reward_fn(prompt, completions, answer, **kwargs):
         current_reward -= format_details["penalty"]
 
     answer_pattern = r'<answer>(.*?)</answer>'
-    answer_match = re.search(answer_pattern, completion_text, re.DOTALL | re.IGNORECASE)
+    answer_match = re.search(answer_pattern, completions_text, re.DOTALL | re.IGNORECASE)
 
     if answer_match:
         current_reward += R_ANSWER_TAG
 
     if think_match and answer_match:
-        think_pos = completion_text.lower().find(f"<{target_think_tag}>")
-        answer_pos = completion_text.lower().find("<answer>")
+        think_pos = completions_text.lower().find(f"<{target_think_tag}>")
+        answer_pos = completions_text.lower().find("<answer>")
         if think_pos > answer_pos:
             current_reward -= ORDER_ERROR_PENALTY # Order error penalty
         else:
             format_ok = True
     
     # GT Extraction
-    pred_answer_content = extract_answer_fallback(completion_text)
+    pred_answer_content = extract_answer_fallback(completions_text)
     gt_content = extract_answer_fallback(answer)
 
     pred_norm = _normalize_text(pred_answer_content)
@@ -115,7 +116,7 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
 
     # --- Preprocessing ---
     # Remove trailing end tokens from completion and add suffix
-    processed_completions = stage2_process_completions_for_reward(completions, END_TOKEN)
+    completions_text = stage2_process_completions_for_reward(completions, END_TOKEN)
 
     # Determine the expected mode from the ground truth answer string
     mode = get_mode(answer) 
@@ -128,7 +129,7 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
     target_think_tag = "think_on" if mode == "should_reasoning" else "think_off"
     # Regex to capture content between <tag> and </tag>
     think_pattern = rf'<{target_think_tag}>(.*?)</{target_think_tag}>'
-    think_match = re.search(think_pattern, processed_completions, re.DOTALL | re.IGNORECASE)
+    think_match = re.search(think_pattern, completions_text, re.DOTALL | re.IGNORECASE)
 
     if think_match:
         # Reward for finding the correct thinking tags
@@ -145,7 +146,7 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
 
     # 2. Evaluate Answer Tags
     answer_pattern = r'<answer>(.*?)</answer>'
-    answer_match = re.search(answer_pattern, processed_completions, re.DOTALL | re.IGNORECASE)
+    answer_match = re.search(answer_pattern, completions_text, re.DOTALL | re.IGNORECASE)
 
     if answer_match:
         # Reward for finding the answer tags
@@ -155,8 +156,8 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
     format_ok = False
     if think_match and answer_match:
         # Find positions of the opening tags
-        think_pos = processed_completions.lower().find(f"<{target_think_tag}>")
-        answer_pos = processed_completions.lower().find("<answer>")
+        think_pos = completions_text.lower().find(f"<{target_think_tag}>")
+        answer_pos = completions_text.lower().find("<answer>")
         
         if think_pos > answer_pos:
             current_reward -= ORDER_ERROR_PENALTY
@@ -165,7 +166,7 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
 
     # 4. Evaluate Answer Correctness
     # Extract answer content from both prediction and ground truth
-    pred_answer_content = extract_answer_fallback(processed_completions)
+    pred_answer_content = extract_answer_fallback(completions_text)
     gt_answer_content = extract_answer_fallback(answer)
 
     # Normalize texts for comparison
@@ -187,9 +188,9 @@ def RAdar_stage2_reward_fn(prompt, completions, answer, **kwargs):
     return current_reward
 
 
-def RAdar_stage15_reward_fn(prompt, completions, answer, **kwargs):
+def RAdar_stage1_1_reward_fn(prompt, completions, answer, **kwargs):
     """
-    Reward function for Radar Stage 2 training.
+    Reward function for Radar Stage 1.1 training.
 
     This function evaluates the model's completion based on:
     1.  Format Adherence: Checks for correct usage of thinking tags (`<think_on>` or `<think_off>`) 
@@ -211,66 +212,31 @@ def RAdar_stage15_reward_fn(prompt, completions, answer, **kwargs):
     """
     
     # --- Constants & Configuration ---
-    R_THINK_TAG = 0.2            # Reward for correct thinking tag pairs
-    R_ANSWER_TAG = 0.05          # Reward for correct answer tag pairs
-    R_CORRECT = 0.75             # Reward for correct answer content
-    THINK_PENALTY_LIMIT = 0.1    # Maximum penalty for thinking content when thinking should be disabled
-    ORDER_ERROR_PENALTY = 0.8    # Penalty if <answer> appears before thinking tags
-    END_TOKEN = "<|im_end|>"
+    R_ANSWER_TAG = 0.3          # Reward for correct answer tag pairs
+    R_CORRECT = 0.7             # Reward for correct answer content
 
     # --- Preprocessing ---
     # Remove trailing end tokens from completion and add suffix
-    processed_completions = stage2_process_completions_for_reward(completions, END_TOKEN)
-
-    # Determine the expected mode from the ground truth answer string
-    mode = get_mode(answer) 
+    completions = stage1_1_process_completions_for_reward(completions)
+    
+    prefix = "<answer>"
+    completions_text = prefix + (completions if completions else "")
+    answer = prefix + (answer if answer else " ")
     
     # --- Reward Calculation ---
     current_reward = 0.0
-    format_details = {"think_length": 0, "penalty": 0.0}
-    
-    # 1. Evaluate Thinking Tags
-    target_think_tag = "think_on" if mode == "should_reasoning" else "think_off"
-    # Regex to capture content between <tag> and </tag>
-    think_pattern = rf'<{target_think_tag}>(.*?)</{target_think_tag}>'
-    think_match = re.search(think_pattern, processed_completions, re.DOTALL | re.IGNORECASE)
-
-    if think_match:
-        # Reward for finding the correct thinking tags
-        current_reward += R_THINK_TAG
-        
-        think_content = think_match.group(1).strip()
-        format_details["think_length"] = len(think_content)
-
-        # Apply penalty if we are in "direct" mode but there is thinking content
-        if mode == "should_direct" and len(think_content) > 0:
-            penalty = calculate_length_penalty(len(think_content), THINK_PENALTY_LIMIT)
-            format_details["penalty"] = penalty
-            current_reward -= penalty
 
     # 2. Evaluate Answer Tags
     answer_pattern = r'<answer>(.*?)</answer>'
-    answer_match = re.search(answer_pattern, processed_completions, re.DOTALL | re.IGNORECASE)
+    answer_match = re.search(answer_pattern, completions_text, re.DOTALL | re.IGNORECASE)
 
     if answer_match:
         # Reward for finding the answer tags
         current_reward += R_ANSWER_TAG
 
-    # 3. Evaluate Tag Order
-    format_ok = False
-    if think_match and answer_match:
-        # Find positions of the opening tags
-        think_pos = processed_completions.lower().find(f"<{target_think_tag}>")
-        answer_pos = processed_completions.lower().find("<answer>")
-        
-        if think_pos > answer_pos:
-            current_reward -= ORDER_ERROR_PENALTY
-        else:
-            format_ok = True
-
     # 4. Evaluate Answer Correctness
     # Extract answer content from both prediction and ground truth
-    pred_answer_content = extract_answer_fallback(processed_completions)
+    pred_answer_content = extract_answer_fallback(completions_text)
     gt_answer_content = extract_answer_fallback(answer)
 
     # Normalize texts for comparison
@@ -284,9 +250,8 @@ def RAdar_stage15_reward_fn(prompt, completions, answer, **kwargs):
 
     # --- Logging & Return ---
     print(
-        f"Mode: {mode} | Format: {format_ok} | Answer: {answer_ok} | Reward: {current_reward:.4f}\n"
+        f"Answer: {answer_ok} | Reward: {current_reward:.4f}\n"
         f"{'='*60}\n"
-        f"Think Length: {format_details['think_length']} | Penalty: {format_details['penalty']:.4f}\n"
     )
     
     return current_reward

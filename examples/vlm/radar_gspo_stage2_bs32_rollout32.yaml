@@ -35,7 +35,7 @@ gconfig:
 actor:
   experiment_name: ${experiment_name}
   trial_name: ${trial_name}
-  path: tmp/checkpoint/stage1.2_saved_ckpt_4b/epoch0epochstep269globalstep269
+  path: <YOUR_LOCAL_PATH_TO_STAGE1_2_CHECKPOINT>
   init_from_scratch: false
   disable_dropout: true
   gradient_checkpointing: true

@@ -155,3 +155,10 @@ def stage1_2_process_completions_for_reward(completions: str, prompt: str) -> st
     prompt_suffix, mode = get_prompt_suffix_and_mode(prompt, marker=None)
     completion_text = prompt_suffix + (completions if completions else "")
     return mode, prompt_suffix, completion_text
+
+def stage1_1_process_completions_for_reward(completions: str) -> str:
+    end_tokens = "<|im_end|>"
+    if completions.lower().rstrip().endswith(end_tokens.lower()):
+        completions = completions.rstrip()[:-len(end_tokens)].rstrip()
+
+    return completions

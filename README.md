@@ -21,7 +21,6 @@ Vision-Language Models (VLMs) excel in complex reasoning tasks but are often con
 ### Installation
 1. Clone the repository:
 ```bash
-git clone git@github.com:henryhu12321-beef/RAdaR.git
 cd RAdaR
 ```
 
