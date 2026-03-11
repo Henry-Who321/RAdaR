@@ -7,25 +7,45 @@ Vision-Language Models (VLMs) excel in complex reasoning tasks but are often con
 ## 🚀 Getting Started
 
 ## 🔧 0. Before You Start
+### System Requirements
+
+| Component | Version |
+|-----------|---------|
+| OS | Linux (Ubuntu recommended) |
+| Python | 3.12 |
+| CUDA Toolkit | 12.x (nvcc required for compiling flash-attn, etc.) |
+| CUDA Driver | ≥ 550.x |
+| GPU | NVIDIA A800/A100/H100 (80GB recommended) |
+| PyTorch | 2.8.0+cu128 |
+
 ### Installation
 1. Clone the repository:
 ```bash
-git clone https://github.com/henryhu12321-beef/RAdaR.git
+git clone git@github.com:henryhu12321-beef/RAdaR.git
 cd RAdaR
 ```
 
 2. Create a conda environment and install dependencies:
 ```bash
-conda create -n radar python=3.10 -y
-conda activate radar
+# 1. Create conda environment
+conda create -n RAdaR python=3.12 -y
+conda activate RAdaR
 
-# Install core dependencies (adjust torch version based on your CUDA)
-pip install torch==2.8.0 torchvision==0.23.0
-pip install transformers==4.57.1 sglang==0.5.5.post1 vllm==0.11.0
-pip install flash-attn --no-build-isolation
+# 2. Install PyTorch with CUDA 12.8 support (MUST install first)
+pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0
 
-# Install AReaL package in editable mode
-pip install -e .
+# 3. Install core dependencies
+pip install -r requirements.txt
+
+# 4. Set CUDA_HOME and install packages that require CUDA compilation
+export CUDA_HOME=/usr/local/cuda  # adjust to your CUDA 12.x path
+pip install -r requirements-special.txt --no-build-isolation
+
+# 5. (Optional) Install dev tools
+pip install -r requirements-dev.txt
+
+# 6. (Optional) If you need latex2sympy2 for evaluation:
+pip install -e evaluation/latex2sympy
 ```
 
 ## 🚀 1. Stage 1.1
@@ -57,13 +77,4 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python3 -m areal.launcher.local examples/vl
 ## 📄 Citation
 
 ```bibtex
-@misc{fu2025areal,
-      title={AReaL: A Large-Scale Asynchronous Reinforcement Learning System for Language Reasoning},
-      author={Wei Fu and Jiaxuan Gao and Xujie Shen and Chen Zhu and Zhiyu Mei and Chuyi He and Shusheng Xu and Guo Wei and Jun Mei and Jiashu Wang and Tongkai Yang and Binhang Yuan and Yi Wu},
-      year={2025},
-      eprint={2505.24298},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2505.24298},
-}
 ```
